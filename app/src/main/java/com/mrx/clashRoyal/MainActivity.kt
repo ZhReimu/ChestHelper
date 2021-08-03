@@ -17,6 +17,14 @@ class MainActivity : AppCompatActivity() {
     private val mHandler = Handler(Looper.getMainLooper())
     private var chestHelper = ClashRoyaleChestHelper("")
 
+    private val saveData = { value: String ->
+        getSharedPreferences("userTagSave", MODE_PRIVATE).edit().putString("userTag", value).apply()
+    }
+
+    private val getData = {
+        getSharedPreferences("userTagSave", MODE_PRIVATE).getString("userTag", null)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -25,9 +33,12 @@ class MainActivity : AppCompatActivity() {
         val btQuery: Button = findViewById(R.id.start)
         val edTAG: TextView = findViewById(R.id.edUserTag)
 
+        if (getData() != null) {
+            edTAG.text = getData()
+        }
         // 设置下拉刷新监听器，下拉刷新时更新用户信息以及宝箱信息
         swp.setOnRefreshListener {
-            val userTag = edTAG.text.toString()
+            val userTag = edTAG.text.toString().trim()
             if (!TextUtils.isEmpty(userTag)) {
                 if (chestHelper.userTAG != userTag) {
                     chestHelper = ClashRoyaleChestHelper(userTag)
@@ -75,8 +86,9 @@ class MainActivity : AppCompatActivity() {
             GridLayoutManager(this, 2, GridLayoutManager.VERTICAL, false)
         // 设置案件监听事件，点击 查宝箱 按钮时开始查宝箱
         btQuery.setOnClickListener {
-            val userTag = edTAG.text.toString()
+            val userTag = edTAG.text.toString().trim()
             if (!TextUtils.isEmpty(userTag)) {
+                saveData(userTag)
                 // 重置 actionBar 的内容
                 supportActionBar?.title = getString(R.string.app_name)
                 // 开始查宝箱之前显示下拉刷新球
@@ -120,4 +132,5 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
 }

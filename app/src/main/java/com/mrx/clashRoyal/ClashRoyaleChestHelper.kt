@@ -59,87 +59,54 @@ class ClashRoyaleChestHelper(val userTAG: String) {
         }
     }
 
-    class RefreshData(val status: Boolean, val msg: String, val lastUpdateDate: String)
+    inner class RefreshData(val status: Boolean, val msg: String, val lastUpdateDate: String) {
+        val currentDate: String = sdf.format(Date())
+    }
 
     private interface Translate {
-        fun getChinese(): String
-        fun getIMGUrl(): String
+        val chineseName: String
+        val imgURL: String
     }
 
     private enum class ChestNameToChinese : Translate {
 
         SilverChest {
-            override fun getChinese(): String {
-                return "白银宝箱"
-            }
-
-            override fun getIMGUrl(): String {
-                return "https://cdn.statsroyale.com/images/silver-chest.png"
-            }
+            override val chineseName = "白银宝箱"
+            override val imgURL = "https://cdn.statsroyale.com/images/silver-chest.png"
         },
         GoldenChest {
-            override fun getChinese(): String {
-                return "黄金宝箱"
-            }
-
-            override fun getIMGUrl(): String {
-                return "https://cdn.statsroyale.com/images/golden-chest.png"
-            }
+            override val chineseName = "黄金宝箱"
+            override val imgURL = "https://cdn.statsroyale.com/images/golden-chest.png"
         },
         MagicalChest {
-            override fun getChinese(): String {
-                return "神奇宝箱"
-            }
-
-            override fun getIMGUrl(): String {
-                return "https://cdn.statsroyale.com/images/magical-chest.png"
-            }
+            override val chineseName = "神奇宝箱"
+            override val imgURL = "https://cdn.statsroyale.com/images/magical-chest.png"
         },
         GiantChest {
-            override fun getChinese(): String {
-                return "巨型宝箱"
-            }
-
-            override fun getIMGUrl(): String {
-                return "https://cdn.statsroyale.com/images/giant-chest.png"
-            }
+            override val chineseName = "巨型宝箱"
+            override val imgURL = "https://cdn.statsroyale.com/images/giant-chest.png"
         },
         MegaLightningChest {
-            override fun getChinese(): String {
-                return "超级雷电宝箱"
-            }
-
-            override fun getIMGUrl(): String {
-                return "https://cdn.statsroyale.com/images/super-lightning-chest.png"
-            }
+            override val chineseName = "超级雷电宝箱"
+            override val imgURL = "https://cdn.statsroyale.com/images/super-lightning-chest.png"
         },
         EpicChest {
-            override fun getChinese(): String {
-                return "史诗宝箱"
-            }
-
-            override fun getIMGUrl(): String {
-                return "https://cdn.statsroyale.com/images/epic-chest.png"
-            }
+            override val chineseName = "史诗宝箱"
+            override val imgURL = "https://cdn.statsroyale.com/images/epic-chest.png"
         },
         LegendaryChest {
-            override fun getChinese(): String {
-                return "传奇宝箱"
-            }
-
-            override fun getIMGUrl(): String {
-                return "https://cdn.statsroyale.com/images/legendary-chest.png"
-            }
+            override val chineseName = "传奇宝箱"
+            override val imgURL = "https://cdn.statsroyale.com/images/legendary-chest.png"
         },
         OverflowingGoldCrate {
-            override fun getChinese(): String {
-                return "满溢金币箱"
-            }
-
-            override fun getIMGUrl(): String {
-                return "https://cdn.statsroyale.com/images/chests/OverflowingCrate.png"
-            }
+            override val chineseName = "满溢金币箱"
+            override val imgURL = "https://cdn.statsroyale.com/images/chests/OverflowingCrate.png"
+        },
+        GoldCrate {
+            override val chineseName = "普通金币箱"
+            override val imgURL = "https://cdn.statsroyale.com/images/chests/GoldCrate.png"
         }
+
     }
 
     fun getChestData(callback: (STATUS: Int, userName: String?, chestList: LinkedList<Chest>?) -> Unit) {
@@ -171,8 +138,8 @@ class ClashRoyaleChestHelper(val userTAG: String) {
                         "下一个"
                     }
                     println(chestText)
-                    val chestIMGURL = chestNameEnum.getIMGUrl()
-                    val chineseChestName = chestNameEnum.getChinese()
+                    val chestIMGURL = chestNameEnum.imgURL
+                    val chineseChestName = chestNameEnum.chineseName
                     val chestObj = Chest(chineseChestName, chestIMGURL, chestNum)
                     chestList.add(chestObj)
                 }

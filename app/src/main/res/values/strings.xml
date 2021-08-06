@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">皇室战争查宝箱</string>
     <string name="imgChestDesc">宝箱图片</string>
+    <string name="menu_update">更新用户信息</string>
+    <string name="menu_about">关于</string>
+    <string name="hint_userTag">输入用户标签</string>
+    <string name="bt_query">查宝箱</string>
 </resources>

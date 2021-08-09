@@ -4,22 +4,19 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.Editable
 import android.text.TextUtils
-import android.text.TextWatcher
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.widget.addTextChangedListener
 import androidx.recyclerview.widget.GridLayoutManager
 import com.mrx.clashRoyal.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
     private val mHandler = Handler(Looper.getMainLooper())
-    private var chestHelper = ClashRoyaleChestHelper("")
+    private var chestHelper: ClashRoyaleChestHelper? = null
     private lateinit var edit: SharedPreferences
 
     private val saveData = { value: String ->
@@ -34,11 +31,11 @@ class MainActivity : AppCompatActivity() {
         val userTag = binding.edUserTag.text.toString().trim()
         if (!TextUtils.isEmpty(userTag)) {
             binding.swp.isRefreshing = true
-            if (chestHelper.userTAG != userTag) {
-                chestHelper = ClashRoyaleChestHelper(userTag)
+            if (chestHelper == null || chestHelper?.userTAG != userTag) {
+                chestHelper = ClashRoyaleChestHelper(this, userTag)
             }
             Toast.makeText(this, "正在更新用户资料", Toast.LENGTH_LONG).show()
-            chestHelper.refreshData { status, refreshResult ->
+            chestHelper!!.refreshData { status, refreshResult ->
                 mHandler.post {
                     // 进入回调函数就说明信息刷新完毕, 就可以取消刷新球了
                     binding.swp.isRefreshing = false
@@ -108,10 +105,10 @@ class MainActivity : AppCompatActivity() {
                 // 点击按钮后禁用按钮，防止多次点击
                 binding.start.isEnabled = false
                 Toast.makeText(this, "正在获取宝箱信息", Toast.LENGTH_LONG).show()
-                if (chestHelper.userTAG != userTag) {
-                    chestHelper = ClashRoyaleChestHelper(userTag)
+                if (chestHelper == null || chestHelper?.userTAG != userTag) {
+                    chestHelper = ClashRoyaleChestHelper(this, userTag)
                 }
-                chestHelper.getChestData { status, userName, chestData ->
+                chestHelper!!.getChestData { status, userName, chestData ->
                     when (status) {
                         ClashRoyaleChestHelper.STATUS_SUCCESS -> {
                             mHandler.post {

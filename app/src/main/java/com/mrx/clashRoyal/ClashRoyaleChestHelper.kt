@@ -1,18 +1,21 @@
 package com.mrx.clashRoyal
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.core.graphics.scale
 import com.alibaba.fastjson.JSONObject
 import okhttp3.*
 import org.jsoup.Jsoup
+import java.io.File
 import java.io.IOException
+import java.net.SocketTimeoutException
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 
-class ClashRoyaleChestHelper(val userTAG: String) {
+class ClashRoyaleChestHelper(val context: Context, val userTAG: String) {
     companion object {
         private const val mainURL = "https://statsroyale.com/profile/"
         const val STATUS_SUCCESS = 1
@@ -48,9 +51,18 @@ class ClashRoyaleChestHelper(val userTAG: String) {
 
         init {
             println("获取宝箱图片 -> $chestIMGUrl")
-            val imgByteArray = okClient.newCall(request.newBuilder().url(chestIMGUrl).build())
-                .execute().body!!.bytes()
-            chestIMG = BitmapFactory.decodeByteArray(imgByteArray, 0, imgByteArray.size)
+            val files = context.filesDir.listFiles()
+            val chestIMGFile = File(context.filesDir, chestName)
+            if (files != null && chestIMGFile !in files) {
+                println("未命中缓存, 缓存文件")
+                val imgByteArray = okClient.newCall(request.newBuilder().url(chestIMGUrl).build())
+                    .execute().body!!.bytes()
+                chestIMG = BitmapFactory.decodeByteArray(imgByteArray, 0, imgByteArray.size)
+                chestIMGFile.writeBytes(imgByteArray)
+            } else {
+                println("命中缓存, 从文件中读取")
+                chestIMG = BitmapFactory.decodeFile(chestIMGFile.absolutePath)
+            }
             chestIMG = chestIMG.scale(200, 200)
         }
 
@@ -135,13 +147,18 @@ class ClashRoyaleChestHelper(val userTAG: String) {
                     val chestNum = if (":" in chestText) {
                         chestText.substringBefore(":").trim()
                     } else {
-                        "下一个"
+                        "+0"
                     }
                     println(chestText)
                     val chestIMGURL = chestNameEnum.imgURL
                     val chineseChestName = chestNameEnum.chineseName
-                    val chestObj = Chest(chineseChestName, chestIMGURL, chestNum)
-                    chestList.add(chestObj)
+                    try {
+                        val chestObj = Chest(chineseChestName, chestIMGURL, chestNum)
+                        chestList.add(chestObj)
+                    } catch (e: SocketTimeoutException) {
+                        callback(STATUS_FAILURE, "获取宝箱图片超时", null)
+                        return
+                    }
                 }
                 if (chestList.size == 0) {
                     callback(STATUS_FAILURE_USER_NOT_EXISTS, "用户不存在", null)

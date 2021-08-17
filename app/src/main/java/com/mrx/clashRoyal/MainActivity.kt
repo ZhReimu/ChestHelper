@@ -1,5 +1,6 @@
 package com.mrx.clashRoyal
 
+import android.Manifest
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
@@ -12,6 +13,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
 import com.mrx.clashRoyal.databinding.ActivityMainBinding
+import com.permissionx.guolindev.PermissionX
+import kotlin.system.exitProcess
 
 class MainActivity : AppCompatActivity() {
 
@@ -81,6 +84,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        PermissionX.init(this)
+            .permissions(Manifest.permission.INTERNET)
+            .request { allGranted, _, _ ->
+                if (!allGranted) {
+                    Toast.makeText(this, "不给权限就爬吧！", Toast.LENGTH_SHORT).show()
+                    finish()
+                    exitProcess(-1)
+                }
+            }
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -114,14 +126,29 @@ class MainActivity : AppCompatActivity() {
                             mHandler.post {
                                 Toast.makeText(this, "宝箱信息获取成功！", Toast.LENGTH_SHORT).show()
                                 binding.chestList.adapter = ChestAdapter(this, chestData!!)
-                                // 设置 supportActionBar
-                                supportActionBar?.title = "$userName 的宝箱信息"
                             }
                         }
                         ClashRoyaleChestHelper.STATUS_FAILURE_USER_NOT_EXISTS -> {
                             mHandler.post {
                                 Toast.makeText(this, "宝箱信息获取失败，用户不存在！", Toast.LENGTH_SHORT).show()
-                                supportActionBar?.title = userName
+                            }
+                        }
+                        ClashRoyaleChestHelper.STATUS_FAILURE_GET_CHEST_PIC_TIMEOUT -> {
+                            mHandler.post {
+                                Toast.makeText(this, "宝箱信息获取失败，下载宝箱图片失败！", Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                        }
+                        ClashRoyaleChestHelper.STATUS_FAILURE_UNKNOWN_CHEST -> {
+                            mHandler.post {
+                                Toast.makeText(this, "宝箱信息获取失败，出现了还未适配的宝箱！", Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                        }
+                        ClashRoyaleChestHelper.STATUS_FAILURE_OTHER_ERROR -> {
+                            mHandler.post {
+                                Toast.makeText(this, "宝箱信息获取失败，请求出错！", Toast.LENGTH_SHORT)
+                                    .show()
                             }
                         }
                         else -> {
@@ -130,10 +157,11 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                     }
-                    // 任务结束后 取消下拉刷新球，启用按钮
+                    // 任务结束后 取消下拉刷新球，启用按钮，设置 supportActionBar
                     mHandler.post {
                         binding.swp.isRefreshing = false
                         binding.start.isEnabled = true
+                        supportActionBar?.title = "$userName 的宝箱信息"
                     }
                 }
             } else {

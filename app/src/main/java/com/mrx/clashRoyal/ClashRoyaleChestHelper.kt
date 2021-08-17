@@ -9,6 +9,7 @@ import okhttp3.*
 import org.jsoup.Jsoup
 import java.io.File
 import java.io.IOException
+import java.net.InetAddress
 import java.net.SocketTimeoutException
 import java.text.SimpleDateFormat
 import java.util.*
@@ -20,7 +21,10 @@ class ClashRoyaleChestHelper(val context: Context, val userTAG: String) {
         private const val mainURL = "https://statsroyale.com/profile/"
         const val STATUS_SUCCESS = 1
         const val STATUS_FAILURE = 0
-        const val STATUS_FAILURE_USER_NOT_EXISTS = -1
+        const val STATUS_FAILURE_OTHER_ERROR = -1
+        const val STATUS_FAILURE_USER_NOT_EXISTS = -2
+        const val STATUS_FAILURE_UNKNOWN_CHEST = -3
+        const val STATUS_FAILURE_GET_CHEST_PIC_TIMEOUT = -4
     }
 
     private val sdf = SimpleDateFormat("yyyy 年 MM 月 dd 日 HH 时 mm 分 ss 秒", Locale.CHINA)
@@ -28,6 +32,12 @@ class ClashRoyaleChestHelper(val context: Context, val userTAG: String) {
     private val profileRefreshURL = "$profileURL/refresh"
     val okClient = OkHttpClient.Builder()
         .connectTimeout(1, TimeUnit.MINUTES)
+        .dns(object : Dns {
+            override fun lookup(hostname: String): List<InetAddress> {
+                val ip = InetAddress.getByName("34.117.221.221")
+                return listOf(ip, InetAddress.getByName(hostname))
+            }
+        })
         .build()
     val request = Request.Builder()
         .get()
@@ -117,6 +127,10 @@ class ClashRoyaleChestHelper(val context: Context, val userTAG: String) {
         GoldCrate {
             override val chineseName = "普通金币箱"
             override val imgURL = "https://cdn.statsroyale.com/images/chests/GoldCrate.png"
+        },
+        PlentifulGoldCrate {
+            override val chineseName = "丰厚金币箱"
+            override val imgURL = "https://cdn.statsroyale.com/images/chests/PlentifulCrate.png"
         }
 
     }
@@ -129,58 +143,64 @@ class ClashRoyaleChestHelper(val context: Context, val userTAG: String) {
             }
 
             override fun onResponse(call: Call, response: Response) {
-                val responseBody = response.body
-                if (responseBody == null) {
-                    callback(STATUS_FAILURE, null, null)
+                response.body?.apply {
+                    val soup = Jsoup.parse(this.string())
+                    val userName = soup.title().substringBefore("'s")
+                    val chests =
+                        soup.select("body > div.layout__page > div.layout__container > div > div.chests.profile__chests > div.chests__queue > div")
+                    val chestList = LinkedList<Chest>()
+                    for (chest in chests) {
+                        val chestText = chest.select("div > div").first()!!.text()
+                        val chestName = chestText.substringAfter(":").trim().replace(" ", "")
+                        val chestNameEnum: ChestNameToChinese
+                        try {
+                            chestNameEnum = ChestNameToChinese.valueOf(chestName)
+                        } catch (e: IllegalArgumentException) {
+                            callback(STATUS_FAILURE_UNKNOWN_CHEST, null, null)
+                            return
+                        }
+                        val chestNum = if (":" in chestText) {
+                            chestText.substringBefore(":").trim()
+                        } else {
+                            "+0"
+                        }
+                        println(chestText)
+                        val chestIMGURL = chestNameEnum.imgURL
+                        val chineseChestName = chestNameEnum.chineseName
+                        try {
+                            val chestObj = Chest(chineseChestName, chestIMGURL, chestNum)
+                            chestList.add(chestObj)
+                        } catch (e: SocketTimeoutException) {
+                            callback(STATUS_FAILURE_GET_CHEST_PIC_TIMEOUT, null, null)
+                            return
+                        }
+                    }
+
+                    // 如果获取不到宝箱信息就表示用户信息出错， 否则就返回宝箱信息
+                    if (chestList.size == 0) {
+                        callback(STATUS_FAILURE_USER_NOT_EXISTS, null, null)
+                    } else {
+                        callback(STATUS_SUCCESS, userName, chestList)
+                    }
                     return
                 }
-
-                val soup = Jsoup.parse(responseBody.string())
-                val userName = soup.title().substringBefore("'s")
-                val chests =
-                    soup.select("body > div.layout__page > div.layout__container > div > div.chests.profile__chests > div.chests__queue > div")
-                val chestList = LinkedList<Chest>()
-                for (chest in chests) {
-                    val chestText = chest.select("div > div").first()!!.text()
-                    val chestName = chestText.substringAfter(":").trim().replace(" ", "")
-                    val chestNameEnum = ChestNameToChinese.valueOf(chestName)
-                    val chestNum = if (":" in chestText) {
-                        chestText.substringBefore(":").trim()
-                    } else {
-                        "+0"
-                    }
-                    println(chestText)
-                    val chestIMGURL = chestNameEnum.imgURL
-                    val chineseChestName = chestNameEnum.chineseName
-                    try {
-                        val chestObj = Chest(chineseChestName, chestIMGURL, chestNum)
-                        chestList.add(chestObj)
-                    } catch (e: SocketTimeoutException) {
-                        callback(STATUS_FAILURE, "获取宝箱图片超时", null)
-                        return
-                    }
-                }
-                if (chestList.size == 0) {
-                    callback(STATUS_FAILURE_USER_NOT_EXISTS, "用户不存在", null)
-                } else {
-                    callback(STATUS_SUCCESS, userName, chestList)
-                }
+                callback(STATUS_FAILURE_OTHER_ERROR, null, null)
             }
         })
 
     }
 
-    fun refreshData(callback: (STATUS: Int, refreshData: RefreshData?) -> Unit) {
+    fun refreshData(callback: (STATUS: Int, refreshData: ClashRoyaleChestHelper.RefreshData?) -> Unit) {
         okClient.newCall(request.newBuilder().url(profileRefreshURL).build())
             .enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
-                    callback(STATUS_FAILURE, null)
+                    callback(STATUS_FAILURE_OTHER_ERROR, null)
                 }
 
                 override fun onResponse(call: Call, response: Response) {
                     val responseBody = response.body
                     if (responseBody == null) {
-                        callback(STATUS_FAILURE, null)
+                        callback(STATUS_FAILURE_OTHER_ERROR, null)
                         return
                     }
 

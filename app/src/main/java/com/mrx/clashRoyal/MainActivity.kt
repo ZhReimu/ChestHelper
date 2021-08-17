@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
         edit.getString("userTag", null)
     }
 
+    // 下拉刷新 = 更新用户资料 + 更新宝箱信息
     private val refreshUserData = {
         val userTag = binding.edUserTag.text.toString().trim()
         if (!TextUtils.isEmpty(userTag)) {
@@ -53,7 +54,7 @@ class MainActivity : AppCompatActivity() {
                                 edit.edit()
                                     .putString("lastRefreshTime", refreshResult.currentDate)
                                     .apply()
-                                // binding.start.callOnClick()
+                                binding.start.callOnClick()
                             }
                             status == ClashRoyaleChestHelper.STATUS_FAILURE_USER_NOT_EXISTS -> {
                                 Toast.makeText(

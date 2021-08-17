@@ -14,6 +14,7 @@ import java.net.SocketTimeoutException
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.collections.HashMap
 
 
 class ClashRoyaleChestHelper(val context: Context, val userTAG: String) {
@@ -33,9 +34,23 @@ class ClashRoyaleChestHelper(val context: Context, val userTAG: String) {
     val okClient = OkHttpClient.Builder()
         .connectTimeout(1, TimeUnit.MINUTES)
         .dns(object : Dns {
+            private val ipList = HashMap<String, MutableList<InetAddress>>()
+
+            init {
+                ipList["cdn.statsroyale.com"] = mutableListOf(
+                    InetAddress.getByName("104.21.233.145"),
+                    InetAddress.getByName("104.21.233.146")
+                )
+                ipList["statsroyale.com"] = mutableListOf(
+                    InetAddress.getByName("34.117.221.221")
+                )
+            }
+
             override fun lookup(hostname: String): List<InetAddress> {
-                val ip = InetAddress.getByName("34.117.221.221")
-                return listOf(ip, InetAddress.getByName(hostname))
+
+                return ipList[hostname]!!.apply {
+                    add(InetAddress.getByName(hostname))
+                }
             }
         })
         .build()
